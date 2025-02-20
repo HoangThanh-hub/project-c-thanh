@@ -5,11 +5,211 @@
 #include<string.h>
 #include <ctype.h>
 #define MAX 100
+//e làm file tương đối nhưng nó bị lỗi không tìm thấy
 #include"/Users/tranhoangthanh/Documents/project_c_bank/include/datatype.h"
 //khai thac ham
 
 struct User users[MAX];
+struct User currentUser;
 int size  = 0;
+
+//hien thi man hinh rieng
+void clearScreen() {
+    for (int i = 0; i < 50; i++) {
+        printf("\n");
+    }
+}
+
+//nguoi dung dang nhap
+void loginUser() {
+    clearScreen();
+    FILE *file = fopen("user.bin", "rb");
+    if (!file) {
+        printf(" No users found! Please contact admin.\n");
+        return;
+    }
+
+    char inputEmail[50], inputPassword[15];
+    int found = 0;
+
+    while (1) {
+        printf("\n===== User Login =====\n");
+        printf("Enter Email: ");
+        scanf("%s", inputEmail);
+
+        printf("Enter Password: ");
+        scanf("%s", inputPassword);
+
+        rewind(file);
+        found = 0;
+
+        while (fread(&currentUser, sizeof(struct User), 1, file)) {
+            if (strcmp(currentUser.email1, inputEmail) == 0 &&
+                strcmp(currentUser.phone1, inputPassword) == 0) {
+                found = 1;
+                break;
+                }
+        }
+
+        fclose(file);
+
+        if (found != 1) {
+            printf(" Invalid Email or Password! Try again.\n");
+        } else {
+            printf(" Login successful! Welcome, %s\n", currentUser.userName);
+            break;
+        }
+    }
+}
+
+//cập nhật số du trong file
+void updateBalanceInFile(char *userId, double newBalance) {
+    FILE *file = fopen("user.bin", "rb+");  // Mở file để đọc và ghi
+    if (!file) {
+        printf("❌ Error opening user file!\n");
+        return;
+    }
+
+    struct User tempUser;
+    int found = 0;  // Kiểm tra xem có tìm thấy user không
+
+    while (fread(&tempUser, sizeof(struct User), 1, file)) {
+        if (strcmp(tempUser.userId, userId) == 0) {
+            tempUser.balance = newBalance;
+            fseek(file, -sizeof(struct User), SEEK_CUR);  // Lùi lại đúng vị trí của user
+            fwrite(&tempUser, sizeof(struct User), 1, file);  // Ghi số dư mới vào file
+            found = 1;
+            break;
+        }
+    }
+
+    fclose(file);
+}
+
+//rút tiền
+void withdrawMoney(struct User *currentUser) {
+    double amount;
+    printf("\n===== Withdraw Money =====\n");
+    printf("Enter amount to withdraw: ");
+    scanf("%lf", &amount);
+
+    if (amount <= 0 || amount > currentUser->balance) {
+        printf(" Invalid amount or insufficient balance!\n");
+        return;
+    }
+
+    currentUser->balance -= amount;
+
+    updateBalanceInFile(currentUser->userId, currentUser->balance);  // Cập nhật số dư vào file
+    printf(" Withdraw successful! New balance: %.2f\n", currentUser->balance);
+}
+
+//nạp tiền
+void depositMoney(struct User *currentUser) {
+    double amount;
+    printf("\n===== Deposit Money =====\n");
+    printf("Enter amount to deposit: ");
+    scanf("%lf", &amount);
+
+    if (amount <= 0) {
+        printf(" Invalid amount!\n");
+        return;
+    }
+
+    currentUser->balance += amount;
+
+
+    updateBalanceInFile(currentUser->userId, currentUser->balance);  // Lưu số dư vào file
+    printf(" Deposit successful! New balance: %.2f\n", currentUser->balance);
+}
+
+//chinh sưa thong tin ng dùn
+void editUser(struct User *currentUser) {
+    clearScreen();
+    printf("\n===== Edit Info User =====\n");
+
+    printf("Current Name: %s\n", currentUser->userName);
+    printf("Enter new Name: ");
+    fgets(currentUser->userName, sizeof(currentUser->userName), stdin);
+    currentUser->userName[strcspn(currentUser->userName, "\n")] = '\0';  // Xóa ký tự xuống dòng
+
+    printf("Current Email: %s\n", currentUser->email1);
+    printf("Enter new Email: ");
+    fgets(currentUser->email1, sizeof(currentUser->email1), stdin);
+    currentUser->email1[strcspn(currentUser->email1, "\n")] = '\0';
+
+    printf("Current Phone: %s\n", currentUser->phone1);
+    printf("Enter new Phone: ");
+    fgets(currentUser->phone1, sizeof(currentUser->phone1), stdin);
+    currentUser->phone1[strcspn(currentUser->phone1, "\n")] = '\0';
+
+    // Cập nhật thông tin vào file user.bin
+    FILE *file = fopen("user.bin", "rb+");
+    if (!file) {
+        printf(" Error opening file!\n");
+        return;
+    }
+
+    struct User tempUser;
+    while (fread(&tempUser, sizeof(struct User), 1, file)) {
+        if (strcmp(tempUser.userId, currentUser->userId) == 0) {
+            fseek(file, -sizeof(struct User), SEEK_CUR);  // Lùi con trỏ để ghi đè
+            fwrite(currentUser, sizeof(struct User), 1, file);
+            fclose(file);
+            printf("Information updated successfully!\n");
+            return;
+        }
+    }
+
+    fclose(file);
+    printf(" User not found!\n");
+}
+
+//chi tiet tai khoản ng dung
+void detailUser2() {
+    clearScreen();
+    if (strlen(currentUser.userId) == 0) {
+        printf(" No user logged in!\n");
+        return;
+    }
+
+    printf("\n===== Account Details =====\n");
+    printf("ID: %s\n", currentUser.userId);
+    printf("Name: %s\n", currentUser.userName);
+    printf("Email: %s\n", currentUser.email1);
+    printf("Phone: %s\n", currentUser.phone1);
+    printf("Birthday: %d/%d/%d\n",currentUser.dateOfBirth.day, currentUser.dateOfBirth.month, currentUser.dateOfBirth.year);
+    printf("Gender: %s\n", currentUser.gender ? "Male" : "Female");
+    printf("Status: %s\n", currentUser.status ? "Open" : "Close");
+    printf("Balance: %.2f\n", currentUser.balance);
+}
+
+//admin dăng nhập11
+void loginAdmin() {
+    clearScreen();
+    const char correctUsername[] = "admin";
+    const char correctPassword[] = "123456";
+
+    char inputUsername[50], inputPassword[50];
+
+    while (1) {
+        printf("\n===== Admin Login =====\n");
+        printf("Username: ");
+        scanf("%s", inputUsername);
+        getchar();  // Xử lý lỗi nhập
+
+        printf("Password: ");
+        scanf("%s", inputPassword);
+        getchar();
+
+        if (strcmp(inputUsername, correctUsername) == 0 && strcmp(inputPassword, correctPassword) == 0) {
+            printf("Login successful!\n");
+            break;
+        } else {
+            printf("Invalid username or password! Try again.\n");
+        }
+    }
+}
 
 
 
@@ -27,6 +227,7 @@ void backToMenu() {
 
 //khoa hoac mở khoá
 void lockOrUnlockUser() {
+    clearScreen();
     char searchId[10];
     int found = 0;
 
@@ -79,11 +280,12 @@ void lockOrUnlockUser() {
 
 // chi tiet nguoi dung
 void detailUser(){
+    clearScreen();
     char searchId[10];
     int found = 0;
     system("clear");
 
-    FILE *userFile = fopen("/Users/tranhoangthanh/Documents/project_c_bank/cmake-build-debug/user.bin", "rb");
+    FILE *userFile = fopen("user.bin", "rb");
     if (userFile == NULL) {
         printf("No users found in the system!\n");
         return;
@@ -103,11 +305,12 @@ void detailUser(){
             printf("------------------------------------------------------\n");
             printf("ID: %s\n", user.userId);
             printf("Name: %s\n", user.userName);
-            printf("Email: %s\n", user.email);
-            printf("Phone Number: %s\n", user.phoneNumber);
+            printf("Email: %s\n", user.email1);
+            printf("Phone Number: %s\n", user.phone1);
             printf("Birthday: %d/%d/%d\n", user.dateOfBirth.day, user.dateOfBirth.month, user.dateOfBirth.year);
             printf("Gender: %s\n", user.gender ? "Male" : "Female");
             printf("Status: %s\n", user.status ? "Open" : "Close");
+            printf("Balance: %.2lf\n", user.balance);
             printf("------------------------------------------------------\n");
             break;
         }
@@ -125,11 +328,12 @@ void detailUser(){
 
 //tim kiem nguoi dung
 void searchUserByName() {
+    clearScreen();
     char searchName[50];
     int found = 0;
     system("clear");
 
-    FILE *file = fopen("/Users/tranhoangthanh/Documents/project_c_bank/cmake-build-debug/user.bin", "rb");
+    FILE *file = fopen("user.bin", "rb");
     if (file == NULL) {
         printf("No users found in the system!\n");
         return;
@@ -155,17 +359,17 @@ void searchUserByName() {
         printf(" No users found with the name \"%s\".\n", searchName);
     } else {
         printf("\n Search Results:\n");
-        printf("+--------------+----------------+---------------------+-------------+--------+\n");
-        printf("| ID           | Name           | Email               | Phone       | Status |\n");
-        printf("+--------------+----------------+---------------------+-------------+--------+\n");
+        printf("+--------------+----------------+-------------+---------------------+--------+\n");
+        printf("| ID           | Name           | Phone       | Email               | Status |\n");
+        printf("+--------------+----------------+-------------+---------------------+--------+\n");
 
         while (fread(&temp, sizeof(struct User), 1, file) != 0) {
             if (strstr(temp.userName, searchName) != NULL) {
-                printf("| %-12s | %-14s | %-19s | %-11s | %-6s |\n",
+                printf("| %-12s | %-14s | %-11s | %-19s | %-6s |\n",
                        temp.userId,
                        temp.userName,
-                       temp.email,
-                       temp.phoneNumber,
+                       temp.phone1,
+                       temp.email1,
                        temp.status ? "Open" : "Close");
                 printf("+--------------+----------------+---------------------+-------------+--------+\n");
                 found = 1;
@@ -192,11 +396,29 @@ int checkEmail(const char *email) {
     return strchr(email, '@') != NULL;
 }
 
+//check xem co bi trung kh
+int isUserExists(const char *value, int type) {
+    FILE *file = fopen("user.bin", "rb");
+    if (!file) return 0; // Nếu file không tồn tại, không có dữ liệu trùng
+
+    struct User temp;
+    while (fread(&temp, sizeof(temp), 1, file)) {
+        if ((type == 1 && strcmp(temp.userId, value) == 0) ||
+            (type == 2 && strcmp(temp.email1, value) == 0) ||
+            (type == 3 && strcmp(temp.phone1, value) == 0)) {
+            fclose(file);
+            return 1;  // Dữ liệu đã tồn tại
+            }
+    }
+    fclose(file);
+    return 0;  // Không có dữ liệu trùng
+}
+
 
 //doc du lieu file danh sach ng dung
 void readUserData() {
     FILE *file;
-    file = fopen("/Users/tranhoangthanh/Documents/project_c_bank/cmake-build-debug/user.bin", "rb");
+    file = fopen("user.bin", "rb");
     if (file == NULL) {
         printf("Error opening file\n");
         return;
@@ -215,6 +437,7 @@ void readUserData() {
 
     //them user
     void addUser() {
+    clearScreen();
         FILE *file = fopen("user.bin", "ab");
         if (file == NULL) {
             printf("can't open\n");
@@ -223,39 +446,70 @@ void readUserData() {
 
             struct User user;
 
+        do{
             printf("Enter the id: ");
             fgets(user.userId, sizeof(user.userId), stdin);
             user.userId[strcspn(user.userId ,"\n")] = '\0';
+        } while (isUserExists(user.userId, 1) && printf(" ID already exists! Try again.\n"));
 
             printf("Enter the name: ");
             fgets(user.userName, sizeof(user.userName), stdin);
             user.userName[strcspn(user.userName ,"\n")] = '\0';
 
-            do {
-                printf("Enter the Email: ");
-                fgets(user.email, sizeof(user.email), stdin);
-                user.email[strcspn(user.email,"\n")] = '\0';
-                if (!checkEmail(user.email)) {
-                    printf("Invalid email! Email must contain '@'. Please try again.\n");
-                }
-            } while (!checkEmail(user.email));
+        // do{
+        //     do {
+        //         printf("Enter the Email: ");
+        //         fgets(user.email, sizeof(user.email), stdin);
+        //         user.email[strcspn(user.email,"\n")] = '\0';
+        //         if (!checkEmail(user.email)) {
+        //             printf("Invalid email! Email must contain '@'. Please try again.\n");
+        //         }
+        //     } while (!checkEmail(user.email));
+        // } while (isUserExists(user.email, 2) && printf(" Email already exists! Try again.\n"));
+    do{
+        do {
+            printf("Enter the Email: ");
+            fgets(user.email1, sizeof(user.email1), stdin);
+            user.email1[strcspn(user.email1,"\n")] = '\0';
+            if (!checkEmail(user.email1)) {
+                printf("Invalid email! Email must contain '@'. Please try again.\n");
+            }
+        } while (!checkEmail(user.email1));
+    } while (isUserExists(user.email1, 2) && printf(" Email already exists! Try again.\n"));
 
+
+    // do{
+    //     // do {
+    //         printf("Enter the phone number: ");
+    //         fgets(user.phone1, sizeof(user.phone1), stdin);
+    //         user.phone1[strcspn(user.phone1,"\n")] = '\0';
+    //     //     if (!checkEmail(user.email1)) {
+    //     //         printf("Invalid email! Email must contain '@'. Please try again.\n");
+    //     //     }
+    //     // } while (!checkEmail(user.email1));
+    // } while (isUserExists(user.phone1, 2) && printf(" Email already exists! Try again.\n"));
+
+
+        do{
             do {
                 printf("Enter the Phone Number: ");
-                fgets(user.phoneNumber, sizeof(user.phoneNumber), stdin);
-                user.phoneNumber[strcspn(user.phoneNumber,"\n")] = '\0';
-                if (!checkPhoneNumber(user.phoneNumber)) {
+                fgets(user.phone1, sizeof(user.phone1), stdin);
+                user.phone1[strcspn(user.phone1,"\n")] = '\0';
+                if (!checkPhoneNumber(user.phone1)) {
                     printf("Invalid phone number! Must start with 0 and have 10 digits. Please try again.\n");
-                }else {
-                    break;
                 }
-            } while (1);
+            } while (!checkPhoneNumber(user.phone1));
+        } while (isUserExists(user.phone1, 3) && printf(" Phone Number already exists! Try again.\n"));
 
             printf("Enter the gender (1: Male, 0: Female): ");
             scanf("%d", &user.gender);
 
             printf("Enter the status (1: open ,0: close): ");
             scanf("%d", &user.status);
+
+
+            printf("Enter the balance: ");
+            scanf("%lf", &user.balance);
 
 
             printf("Enter the Date of Birth:\n");
@@ -281,8 +535,9 @@ void readUserData() {
 
 //bang danh sach
 void listUser() {
+    clearScreen();
     system("clear");
-    FILE *file = fopen("/Users/tranhoangthanh/Documents/project_c_bank/cmake-build-debug/user.bin", "rb");
+    FILE *file = fopen("user.bin", "rb");
     if (file == NULL) {
         printf("can't open\n");
         return;
@@ -290,20 +545,20 @@ void listUser() {
 
 
 
-    printf("+--------------+----------------+---------------------+-------------+--------+\n");
-    printf("| ID           | Name           | Email               | Phone       | Status |\n");
-    printf("+--------------+----------------+---------------------+-------------+--------+\n");
+    printf("+--------------+----------------+-------------+---------------------+--------+\n");
+    printf("| ID           | Name           | Phone       | Email               | Status |\n");
+    printf("+--------------+----------------+-------------+---------------------+--------+\n");
 
 
     struct User temp;
     while (fread(&temp, sizeof(temp), 1, file) != 0){
-        printf("| %-12s | %-14s | %-19s | %-11s | %-6s |\n",
+        printf("| %-12s | %-14s | %-11s | %-19s | %-6s |\n",
                temp.userId,
                temp.userName,
-               temp.email,
-               temp.phoneNumber,
+               temp.phone1,
+               temp.email1,
                temp.status ? "Open" : "Close");
-        printf("+--------------+----------------+---------------------+-------------+--------+\n");
+        printf("+--------------+----------------+-------------+---------------------+--------+\n");
     }
     fclose(file);
 
@@ -311,9 +566,10 @@ void listUser() {
 
 // sap xep
 void sortUsersByName() {
+    clearScreen();
     int userCount = 0;
 
-    FILE *file = fopen("/Users/tranhoangthanh/Documents/project_c_bank/cmake-build-debug/user.bin", "rb");
+    FILE *file = fopen("user.bin", "rb");
     if (!file) {
         printf("Error: No users found!\n");
         return;
@@ -350,7 +606,7 @@ void sortUsersByName() {
             }
         }
     }
-    file = fopen("/Users/tranhoangthanh/Documents/project_c_bank/cmake-build-debug/user.bin", "wb");
+    file = fopen("user.bin", "wb");
     fwrite(users, sizeof(struct User), userCount, file);
     fclose(file);
 
@@ -358,12 +614,7 @@ void sortUsersByName() {
     listUser();  // Display the sorted user list
 }
 
-//hien thi man hinh rieng
-void clearScreen() {
-    for (int i = 0; i < 50; i++) {
-        printf("\n");
-    }
-}
+
 
 
 //3 menu admin
@@ -373,7 +624,7 @@ void menuAdmin() {
 
     printf("\n\n***Bank Management System Using C***\n");
     printf("=====================================\n");
-    printf("              MENU\n");
+    printf("              MENU ADMIN\n");
     printf("====================================\n");
     printf("[1] Show all user\n");
     printf("[2] Add a new user\n");
@@ -411,13 +662,69 @@ void menuAdmin() {
         default:
             printf("Invalid Choice\n");
     }
-        printf("\nPress Enter to return");
-        getchar();  // Đợi người dùng nhấn Enter
+        if (choice1 ==0) {
+            break;
+        }
+        else {
+            printf("\nPress Enter to return");
+            getchar();  // Đợi người dùng nhấn Enter
+        }
     }
 };
 
+//2 menu user
+void menuUser() {
+    while (1) {
+        clearScreen();
+
+        printf("\n\n***Bank Management System Using C***\n");
+        printf("=====================================\n");
+        printf("              MENU USER\n");
+        printf("====================================\n");
+        printf("[1] Detail Account\n");
+        printf("[2] Edit Account\n");
+        printf("[3] Deposit Money\n");
+        printf("[4] Withdraw Money\n");
+        printf("[0] Exit\n");
+        printf("======================================\n");
+        int choice2;
+        printf("Please enter your choice: ");
+        scanf("%d", &choice2);
+        fflush(stdin);
+        switch(choice2) {
+            case 1:
+                detailUser2();
+            break;
+            case 2:
+                 editUser(&currentUser);
+            break;
+            case 3:
+                depositMoney(&currentUser);
+                getchar();
+            break;
+            case 4:
+                withdrawMoney(&currentUser);
+                getchar();
+            break;
+            case 0:
+                break;
+            default:
+                printf("Invalid Choice\n");
+        }
+        if (choice2 ==0) {
+            break;
+        }
+        else {
+            printf("\nPress Enter to return");
+            getchar();  // Đợi người dùng nhấn Enter
+        }
+    }
+};
+
+
 //1 menu chinh
 void mainMenu() {
+    clearScreen();
     printf("\n***Bank Management System Using C***\n\n");
     printf("====================================\n");
     printf("|        CHOOSE YOUR ROLE          |\n");
@@ -432,12 +739,16 @@ void mainMenu() {
     scanf("%d", &choice);
     switch(choice) {
         case 1:
+            loginAdmin();
             menuAdmin();
         break;
         case 2:
-            printf("User\n");
+            loginUser();
+            menuUser();
         break;
         case 0:
+            printf("\n==========THANK YOU==========");
+            printf("\n=========SEE YOU SOON========");
             exit(0);
         default:
             printf("Invalid Choice\n");

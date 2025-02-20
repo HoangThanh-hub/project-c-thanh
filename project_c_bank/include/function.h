@@ -44,3 +44,21 @@ void sortUsersByName();
 void lockOrUnlockUser();
 //hien thi man hinh rieng
 void clearScreen();
+//check xem co bi trung kh
+int isUserExists(const char *value, int type);
+//admin dăng nhập
+void loginAdmin();
+//2 menu user
+void menuUser();
+//user đăng nhập
+void loginUser();
+//chi tiet tai khoan cảu nguoi dung
+void detailUser2();
+//chinh sưa thong tin ng dùn
+void editUser(struct User *currentUser);
+//nạp tiền
+void depositMoney(struct User *currentUser);
+//rút tiền
+void withdrawMoney(struct User *currentUser);
+//cập nhật số du trong file
+void updateBalanceInFile(char *userId, double newBalance);

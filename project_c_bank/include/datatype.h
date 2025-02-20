@@ -21,15 +21,9 @@ struct Date{
 };
 
 
-//2 account infor
 
-struct AccountInfo {
-    char userId[10];
-    float balance;
-    bool status;
-    char userName[10];
-    char password[10];
-};
+
+
 
 
 
@@ -40,8 +34,12 @@ struct User {
     char userName[20];
     struct Date dateOfBirth;
     bool gender;
-    char phoneNumber[15];
+
     char email[25];
+    char email1[25];
+    double balance;
+    char phone[25];
+    char phone1[25];
     bool status;
     char password[10];
 };
